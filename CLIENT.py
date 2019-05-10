@@ -1,85 +1,35 @@
-"""
-labels
- 0 - Name
- 1 - Left game
- 2 - Stop game
- 3 - Start game
+import selectors
+import socket
+
+from client_connection import Connection
+
+sel = selectors.DefaultSelector()
 
 
-
-"""
-
-import threading
-from socket import *
-from client_menu import *
-
-#НАСТРОЙКИ СЕТИ
-server = ('localhost', 9090)
-
-host = gethostbyname(gethostname())
-port = 0
-addr = (host, port)
-
-sock = socket(AF_INET, SOCK_DGRAM)
-sock.bind((host, port))
-last_t = 0
-
-def send(data, label):
-    data = str(label) + '%%' + data
-    #print("send: ", data)
-    data = str.encode(data)
-    sock.sendto(data, server)
+def start_connection(host, port):
+    addr = (host, port)
+    print("starting connection to", addr)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.setblocking(False)
+    sock.connect_ex(addr)
+    con = Connection(sel, sock, addr)
+    sel.register(sock, selectors.EVENT_READ | selectors.EVENT_WRITE, con)
+    return con
 
 
-#РЕГИСТРАЦИЯ
-start_message()
-name = input('Enter your name: ')
-send(name, 0)
+if __name__ == "__main__":
+    host, port = '127.0.0.1', 9090
+    con = start_connection(host, port)
+    con.entry()
 
-
-
-
-def receving(name, sock): #Cлушает
-    global last_t
-
-    while not stop:
-        data, addr = sock.recvfrom(1024)
-        data = data.decode("utf-8")
-        #print(data)
-        last_t, data = data.split("%%")
-
-        if data.find('ROUND')!= -1:
-            menuprint(data)
-        elif data.find('BEGIN') !=-1:
-            menuprint(data)
-        elif data.find('END') !=-1:
-            menuprint(data)
-        else:
-            print(data)
-            #print(last_t)
-
-stop = False
-rT = threading.Thread(target=receving, args=("Boo", sock))
-rT.start()
-
-
-while not stop:
-    try:
-        data = input()
-        if data.lower() in ['stop', 'quit']:
-            stop = True
-
-            send("left game", 1)
-        elif data.upper() == "START":
-            send(data, 3)
-        else:
-            send(data, last_t)
-
-
-    except:
-
-        send("close game", 2)
-        stop = True
-
-print("\nBye")
-sock.close()
+    while True:
+        try:
+            events = sel.select(timeout=1)
+            for key, mask in events:
+                con.process_events(mask)
+            # Check for a socket being monitored to continue.
+            if not sel.get_map():
+                break
+        except OSError:
+            print('Connection closed before opening')
+            break

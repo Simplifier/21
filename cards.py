@@ -1,5 +1,4 @@
 class Card(object):
-
     card_values = {
         'Ace': 11,  # value of the ace is high until it needs to be low
         '2': 2,
@@ -24,6 +23,7 @@ class Card(object):
         self.suit = suit.capitalize()
         self.rank = rank
         self.points = self.card_values[rank]
+
 
 def front_card(*cards, return_string=True):
     """
@@ -80,7 +80,8 @@ def reverse_card(*cards):
     :return: A string, the nice ascii version of cards
     """
     # a flipper over card. # This is a list of lists instead of a list of string becuase appending to a list is better then adding a string
-    lines = [['┌─────────┐'], ['│░░░░░░░░░│'], ['│░░░░░░░░░│'], ['│░░░░░░░░░│'], ['│░░░░░░░░░│'], ['│░░░░░░░░░│'], ['│░░░░░░░░░│'], ['│░░░░░░░░░│'], ['└─────────┘']]
+    lines = [['┌─────────┐'], ['│░░░░░░░░░│'], ['│░░░░░░░░░│'], ['│░░░░░░░░░│'], ['│░░░░░░░░░│'], ['│░░░░░░░░░│'],
+             ['│░░░░░░░░░│'], ['│░░░░░░░░░│'], ['└─────────┘']]
 
     # store the non-flipped over card after the one that is flipped over
     cards_except_first = front_card(*cards[1:], return_string=False)
@@ -93,5 +94,3 @@ def reverse_card(*cards):
 
     # convert the list into a single string
     return '\n'.join(lines)
-
-
