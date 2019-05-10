@@ -6,7 +6,7 @@ from typing import Optional
 import deck
 from game_room import GameRoom
 from player import Player
-from message import Message
+from message import IncomingMessage, OutgoingMessage
 from protocol_command import ProtocolCommand
 
 
@@ -17,8 +17,8 @@ class Connection:
         self.sock: socket = sock
         self.addr = addr
 
-        self.in_msg: Message = Message(sock, self)
-        self.out_msg: Message = Message(sock)
+        self.in_msg: IncomingMessage = IncomingMessage(sock, self)
+        self.out_msg: OutgoingMessage = OutgoingMessage(sock)
         self.player: Optional[Player] = None
         self.game: Optional[GameRoom] = None
 
@@ -28,7 +28,7 @@ class Connection:
 
     def read(self):
         if self.in_msg.is_loaded:
-            self.in_msg = Message(self.sock, self)
+            self.in_msg = IncomingMessage(self.sock, self)
         self.in_msg.read()
 
         if not self.in_msg.is_loaded:

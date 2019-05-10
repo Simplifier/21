@@ -7,7 +7,7 @@ from typing import Optional
 from protocol_command import ProtocolCommand
 
 
-class Message:
+class IncomingMessage:
     def __init__(self, sock, con=None) -> None:
         self.con = con
         self.sock: socket = sock
@@ -61,6 +61,18 @@ class Message:
         self.body = self._json_decode(raw_body)
         self.is_loaded = True
 
+    def _json_decode(self, json_bytes: bytes):
+        obj = json.loads(json_bytes.decode('utf-8'))
+        return obj
+
+    def close(self):
+        self.is_closed = True
+        self.con.close()
+
+class OutgoingMessage:
+    def __init__(self, sock) -> None:
+        self.sock: socket = sock
+
     def send(self, command: ProtocolCommand, payload=None):
         data = self.encode(command, payload)
         self.sock.sendall(data)
@@ -77,11 +89,3 @@ class Message:
 
     def _json_encode(self, obj):
         return json.dumps(obj, ensure_ascii=False).encode('utf-8')
-
-    def _json_decode(self, json_bytes: bytes):
-        obj = json.loads(json_bytes.decode('utf-8'))
-        return obj
-
-    def close(self):
-        self.is_closed = True
-        self.con.close()

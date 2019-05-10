@@ -3,7 +3,7 @@ from socket import socket
 
 from cards import Card, front_card
 from menu import show_rules, menu_print
-from message import Message
+from message import IncomingMessage, OutgoingMessage
 from protocol_command import ProtocolCommand
 
 
@@ -12,8 +12,8 @@ class Connection:
         self.selector = selector
         self.sock: socket = sock
         self.addr = addr
-        self.in_msg: Message = Message(sock)
-        self.out_msg: Message = Message(sock)
+        self.in_msg: IncomingMessage = IncomingMessage(sock)
+        self.out_msg: OutgoingMessage = OutgoingMessage(sock)
 
     def process_events(self, mask):
         if mask & selectors.EVENT_READ:
@@ -21,7 +21,7 @@ class Connection:
 
     def read(self):
         if self.in_msg.is_loaded:
-            self.in_msg = Message(self.sock)
+            self.in_msg = IncomingMessage(self.sock)
         self.in_msg.read()
 
         if not self.in_msg.is_loaded:
