@@ -21,6 +21,14 @@ class Connection:
         self.out_msg = OutgoingMessage(sock)
         self.player: Optional[Player] = None
         self.game: Optional[GameRoom] = None
+        self.cmd_handlers = {
+            ProtocolCommand.SEND_NAME: self.create_player,
+            ProtocolCommand.NEW_ROOM: self.create_game,
+            ProtocolCommand.JOIN_ROOM: lambda: self.out_msg.send(ProtocolCommand.WAIT_PASS),
+            ProtocolCommand.SEND_PASS: self.handle_join_try,
+            ProtocolCommand.START_GAME: self.start_game,
+            ProtocolCommand.TAKE_CARD: self.make_turn,
+        }
 
     def process_events(self, mask):
         if mask & selectors.EVENT_READ:
@@ -36,21 +44,7 @@ class Connection:
 
         print(f'cmd: {self.in_msg.cmd}, args: {self.in_msg.body}, from: {self.addr}, {self.player}')
 
-        if self.in_msg.cmd == ProtocolCommand.SEND_NAME:
-            self.create_player(**self.in_msg.body)
-        elif self.in_msg.cmd == ProtocolCommand.NEW_ROOM:
-            game = self.create_game()
-            self.out_msg.send(ProtocolCommand.PASS_CREATED, {
-                'password': game.password
-            })
-        elif self.in_msg.cmd == ProtocolCommand.JOIN_ROOM:
-            self.out_msg.send(ProtocolCommand.WAIT_PASS)
-        elif self.in_msg.cmd == ProtocolCommand.SEND_PASS:
-            self.handle_join_try(**self.in_msg.body)
-        elif self.in_msg.cmd == ProtocolCommand.START_GAME:
-            self.start_game()
-        elif self.in_msg.cmd == ProtocolCommand.TAKE_CARD:
-            self.make_turn(**self.in_msg.body)
+        self.cmd_handlers[self.in_msg.cmd](**self.in_msg.body)
 
     def create_player(self, name):
         self.player = Player(name, self)
@@ -60,7 +54,9 @@ class Connection:
         password = randint(1000, 10000)
         self.game = GameRoom(self.player, password)
         self.game_rooms[password] = self.game
-        return self.game
+        self.out_msg.send(ProtocolCommand.PASS_CREATED, {
+            'password': self.game.password
+        })
 
     def handle_join_try(self, password):
         game: GameRoom = self.game_rooms.get(password, None)
