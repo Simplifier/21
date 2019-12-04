@@ -17,8 +17,8 @@ class Connection:
         self.sock: socket = sock
         self.addr = addr
 
-        self.in_msg: IncomingMessage = IncomingMessage(sock, self)
-        self.out_msg: OutgoingMessage = OutgoingMessage(sock)
+        self.in_msg = IncomingMessage(sock, self)
+        self.out_msg = OutgoingMessage(sock)
         self.player: Optional[Player] = None
         self.game: Optional[GameRoom] = None
 

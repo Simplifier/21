@@ -15,7 +15,7 @@ class IncomingMessage:
         self._in_buffer = b""
         self.cmd: Optional[ProtocolCommand] = None
         self._size = -1
-        self.body = None
+        self.body = {}
         self.is_loaded = False
         self.is_closed = False
 
@@ -68,6 +68,7 @@ class IncomingMessage:
     def close(self):
         self.is_closed = True
         self.con.close()
+
 
 class OutgoingMessage:
     def __init__(self, sock) -> None:

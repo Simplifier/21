@@ -14,6 +14,22 @@ class Connection:
         self.addr = addr
         self.in_msg: IncomingMessage = IncomingMessage(sock)
         self.out_msg: OutgoingMessage = OutgoingMessage(sock)
+        self.cmd_handlers = {
+            ProtocolCommand.PASS_CREATED: self.host_received_password,
+            ProtocolCommand.WAIT_PASS: self.companion_send_password,
+            ProtocolCommand.REJECT_JOIN: self.companion_rejected,
+            ProtocolCommand.ACCEPT_JOIN: self.companion_joined,
+            ProtocolCommand.PLAYER_JOINED: self.show_joined_player,
+            ProtocolCommand.GAME_CAN_BEGIN: self.start_game,
+            ProtocolCommand.ROUND_STARTED: self.start_round,
+            ProtocolCommand.CARD_TAKEN: self.receive_card,
+            ProtocolCommand.PLAYER_TURNED: self.show_choice_notification,
+            ProtocolCommand.YOU_WIN: self.you_win,
+            ProtocolCommand.PLAYER_WINS: self.someone_wins,
+            ProtocolCommand.YOU_LOSE: self.you_lose,
+            ProtocolCommand.PLAYER_LOSES: self.someone_loses,
+            ProtocolCommand.GAME_OVER: self.game_over,
+        }
 
     def process_events(self, mask):
         if mask & selectors.EVENT_READ:
@@ -27,34 +43,7 @@ class Connection:
         if not self.in_msg.is_loaded:
             return
 
-        if self.in_msg.cmd == ProtocolCommand.PASS_CREATED:
-            self.host_received_password(**self.in_msg.body)
-        elif self.in_msg.cmd == ProtocolCommand.WAIT_PASS:
-            self.companion_send_password()
-        elif self.in_msg.cmd == ProtocolCommand.REJECT_JOIN:
-            self.companion_rejected()
-        elif self.in_msg.cmd == ProtocolCommand.ACCEPT_JOIN:
-            self.companion_joined(**self.in_msg.body)
-        elif self.in_msg.cmd == ProtocolCommand.PLAYER_JOINED:
-            self.show_joined_player(**self.in_msg.body)
-        elif self.in_msg.cmd == ProtocolCommand.GAME_CAN_BEGIN:
-            self.start_game()
-        elif self.in_msg.cmd == ProtocolCommand.ROUND_STARTED:
-            self.start_round(**self.in_msg.body)
-        elif self.in_msg.cmd == ProtocolCommand.CARD_TAKEN:
-            self.receive_card(**self.in_msg.body)
-        elif self.in_msg.cmd == ProtocolCommand.PLAYER_TURNED:
-            self.show_choice_notification(**self.in_msg.body)
-        elif self.in_msg.cmd == ProtocolCommand.YOU_WIN:
-            self.you_win()
-        elif self.in_msg.cmd == ProtocolCommand.PLAYER_WINS:
-            self.someone_wins(**self.in_msg.body)
-        elif self.in_msg.cmd == ProtocolCommand.YOU_LOSE:
-            self.you_lose()
-        elif self.in_msg.cmd == ProtocolCommand.PLAYER_LOSES:
-            self.someone_loses(**self.in_msg.body)
-        elif self.in_msg.cmd == ProtocolCommand.GAME_OVER:
-            self.game_over()
+        self.cmd_handlers[self.in_msg.cmd](**self.in_msg.body)
 
     def entry(self):
         show_rules()
@@ -83,12 +72,26 @@ class Connection:
         print('You created a new game')
         print('Wait other players')
         print('Game password:', password)
-        print('Send it to your companions, who wants to join the game')
+        print('Send it to your companions, who want to join the game')
 
     def companion_send_password(self):
         print('Enter game password')
-        password = int(input())
-        self.out_msg.send(ProtocolCommand.SEND_PASS, {'password': password})
+        raw_pass = input().lower()
+        if self.read_quit(raw_pass):
+            return
+
+        if self._is_int(raw_pass):
+            self.out_msg.send(ProtocolCommand.SEND_PASS, {'password': int(raw_pass)})
+        else:
+            print('Password should be a number. Please retry')
+            self.companion_send_password()
+
+    def _is_int(self, value: str):
+        try:
+            int(value)
+            return True
+        except:
+            return False
 
     def companion_rejected(self):
         print('Password is incorrect. Please retry')
